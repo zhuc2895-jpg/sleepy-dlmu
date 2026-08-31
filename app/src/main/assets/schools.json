@@ -155,6 +155,19 @@
   },
   {
     "sortKey": "D",
+    "name": "大连海事大学",
+    "url": "https://www.dlmu.edu.cn/",
+    "type": "urp_new",
+    "aliases": [
+      "dlmu",
+      "海事大学",
+      "海大"
+    ],
+    "sortKeyFull": "dalianhaishidaxue",
+    "enableFetch": false
+  },
+  {
+    "sortKey": "D",
     "name": "大连工业大学艺术与信息工程学院",
     "url": "http://www.caie.org/page_556.shtml",
     "type": "zf",

@@ -24,6 +24,7 @@ object ThemePresets {
     const val KEY_OCEAN = "ocean"
     const val KEY_PEACH = "peach"
     const val KEY_SLATE = "slate"
+    const val KEY_MARITIME = "maritime"
     const val KEY_SYSTEM = "system"
 
     /** 默认淡紫 — 保留 v1.0.6 行为 */
@@ -362,7 +363,89 @@ object ThemePresets {
         dark = SlateDark
     )
 
-    val all: List<ThemePreset> = listOf(Default, Spring, Ocean, Peach, Slate)
+    /** 海事蓝 — 大连海事大学校园色系 · 深蓝航海 */
+    val MaritimeLight = WakeUpColorScheme(
+        primary = Color(0xFF004A7C),
+        onPrimary = Color.White,
+        primaryContainer = Color(0xFFCDE5FF),
+        onPrimaryContainer = Color(0xFF001E33),
+
+        secondary = Color(0xFF4C5F7A),
+        onSecondary = Color.White,
+        secondaryContainer = Color(0xFFCFE0FA),
+        onSecondaryContainer = Color(0xFF091C32),
+
+        tertiary = Color(0xFF006875),
+        onTertiary = Color.White,
+        tertiaryContainer = Color(0xFF9EEEF8),
+        onTertiaryContainer = Color(0xFF001F25),
+
+        background = Color(0xFFF7F9FC),
+        onBackground = Color(0xFF181C20),
+        surface = Color(0xFFF7F9FC),
+        onSurface = Color(0xFF181C20),
+        surfaceVariant = Color(0xFFDCE2EA),
+        onSurfaceVariant = Color(0xFF404753),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFF0F4F8),
+        surfaceContainer = Color(0xFFEAEEF4),
+        surfaceContainerHigh = Color(0xFFE3E8EF),
+        surfaceContainerHighest = Color(0xFFDDE2E9),
+
+        outline = Color(0xFF707784),
+        outlineVariant = Color(0xFFC0C6D0),
+        scrim = Color(0xFF000000),
+
+        error = Color(0xFFBA1A1A),
+        onError = Color.White,
+        errorContainer = Color(0xFFFFDAD6),
+        onErrorContainer = Color(0xFF410002)
+    )
+    val MaritimeDark = WakeUpColorScheme(
+        primary = Color(0xFF96CBFF),
+        onPrimary = Color(0xFF003355),
+        primaryContainer = Color(0xFF004574),
+        onPrimaryContainer = Color(0xFFCDE5FF),
+
+        secondary = Color(0xFFB3C4DE),
+        onSecondary = Color(0xFF1E3048),
+        secondaryContainer = Color(0xFF344861),
+        onSecondaryContainer = Color(0xFFCFE0FA),
+
+        tertiary = Color(0xFF82D1DE),
+        onTertiary = Color(0xFF00363E),
+        tertiaryContainer = Color(0xFF004F59),
+        onTertiaryContainer = Color(0xFF9EEEF8),
+
+        background = Color(0xFF101418),
+        onBackground = Color(0xFFE0E2E6),
+        surface = Color(0xFF101418),
+        onSurface = Color(0xFFE0E2E6),
+        surfaceVariant = Color(0xFF404753),
+        onSurfaceVariant = Color(0xFFC0C6D0),
+        surfaceContainerLowest = Color(0xFF0A0E12),
+        surfaceContainerLow = Color(0xFF181C21),
+        surfaceContainer = Color(0xFF1C2026),
+        surfaceContainerHigh = Color(0xFF272B32),
+        surfaceContainerHighest = Color(0xFF32363D),
+
+        outline = Color(0xFF8A909B),
+        outlineVariant = Color(0xFF404753),
+        scrim = Color(0xFF000000),
+
+        error = Color(0xFFFFB4AB),
+        onError = Color(0xFF690005),
+        errorContainer = Color(0xFF93000A),
+        onErrorContainer = Color(0xFFFFDAD6)
+    )
+    val Maritime = ThemePreset(
+        key = KEY_MARITIME,
+        nameRes = R.string.theme_name_maritime,
+        light = MaritimeLight,
+        dark = MaritimeDark
+    )
+
+    val all: List<ThemePreset> = listOf(Default, Spring, Ocean, Peach, Slate, Maritime)
 
     fun byKey(key: String?): ThemePreset {
         if (key == null) return Default

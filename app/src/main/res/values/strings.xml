@@ -550,6 +550,10 @@
     <string name="theme_name_ocean">海蓝</string>
     <string name="theme_name_peach">蜜桃粉</string>
     <string name="theme_name_slate">石板灰</string>
+    <string name="theme_name_maritime">海事蓝</string>
+    <string name="school_recommended">热门推荐</string>
+    <string name="school_recommended_tag">推荐</string>
+    <string name="dlmu_intranet_hint">大连海事大学教务系统需在校内网络或 VPN 环境下访问</string>
     <!-- i18n: additional strings added for full localization -->
     <string name="default_table_with_num">默认%1$d</string>
     <string name="new_course">新课程</string>

@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,6 +73,9 @@ private fun normalizeUrl(s: String): String {
     val t = s.trim()
     return if (t.startsWith("http://") || t.startsWith("https://")) t else "https://$t"
 }
+
+/** 热门推荐学校（置顶展示），按列表顺序排列 */
+private val RECOMMENDED_SCHOOL_NAMES = listOf("大连海事大学")
 
 /** 学校首字母分组 */
 private data class SchoolSection(
@@ -263,53 +268,69 @@ fun SchoolSelectScreen(
             } else if (isUrl && filtered.isEmpty()) {
                 // URL only, no school list
             } else {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    // 学校列表
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        sections.forEach { section ->
-                            // Section header
-                            item(key = "header_${section.letter}") {
-                                SectionHeader(letter = section.letter)
-                            }
-                            // Schools
-                            items(
-                                items = section.schools,
-                                key = { "${it.sortKey}_${it.name}" }
-                            ) { school ->
-                                SchoolRow(
-                                    school = school,
-                                    onClick = { onSchoolSelected(school) }
-                                )
-                                HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                            }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // 热门推荐区（仅无搜索时展示）
+                    val recommended = remember(schools) {
+                        RECOMMENDED_SCHOOL_NAMES.mapNotNull { name ->
+                            schools.firstOrNull { it.name == name }
                         }
                     }
-
-                    // 字母索引栏
-                    if (showIndexBar) {
-                        AlphabetIndexBar(
-                            letters = sections.map { it.letter },
-                            activeLetter = activeLetter,
-                            onLetterTap = { letter ->
-                                val targetIdx = letterToIndex[letter]
-                                if (targetIdx != null) {
-                                    scope.launch {
-                                        listState.animateScrollToItem(targetIdx)
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .width(32.dp)
-                                .fillMaxSize()
+                    if (query.isBlank() && recommended.isNotEmpty()) {
+                        RecommendedSection(
+                            schools = recommended,
+                            onSchoolSelected = onSchoolSelected,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // 学校列表
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            sections.forEach { section ->
+                                // Section header
+                                item(key = "header_${section.letter}") {
+                                    SectionHeader(letter = section.letter)
+                                }
+                                // Schools
+                                items(
+                                    items = section.schools,
+                                    key = { "${it.sortKey}_${it.name}" }
+                                ) { school ->
+                                    SchoolRow(
+                                        school = school,
+                                        onClick = { onSchoolSelected(school) }
+                                    )
+                                    HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
+                                }
+                            }
+                        }
+
+                        // 字母索引栏
+                        if (showIndexBar) {
+                            AlphabetIndexBar(
+                                letters = sections.map { it.letter },
+                                activeLetter = activeLetter,
+                                onLetterTap = { letter ->
+                                    val targetIdx = letterToIndex[letter]
+                                    if (targetIdx != null) {
+                                        scope.launch {
+                                            listState.animateScrollToItem(targetIdx)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .width(32.dp)
+                                    .fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -563,5 +584,151 @@ private fun EmptyState(isLoading: Boolean) {
             text = if (isLoading) stringResource(R.string.loading) else stringResource(R.string.no_school_found),
             color = colors.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * 热门推荐区域 — 仅在无搜索时展示，置顶显示推荐学校卡片。
+ * 卡片风格与普通 SchoolRow 一致，但额外增加：
+ *   · 左侧「⭐」图标 + 主题色填充
+ *   · 右上角「推荐」徽章（school_recommended_tag）
+ *   · 大连海事大学专属：内网 / VPN 访问提示
+ */
+@Composable
+private fun RecommendedSection(
+    schools: List<JwSchoolInfo>,
+    onSchoolSelected: (JwSchoolInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = SleepyTheme.colors
+    Column(modifier = modifier) {
+        // 标题行：热门推荐
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Star,
+                contentDescription = null,
+                tint = colors.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.size(6.dp))
+            Text(
+                text = stringResource(R.string.school_recommended),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.primary
+            )
+        }
+
+        schools.forEach { school ->
+            RecommendedSchoolCard(
+                school = school,
+                onClick = { onSchoolSelected(school) }
+            )
+            Spacer(modifier = Modifier.size(6.dp))
+        }
+
+        HorizontalDivider(
+            color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline),
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun RecommendedSchoolCard(school: JwSchoolInfo, onClick: () -> Unit) {
+    val colors = SleepyTheme.colors
+    val isClickable = school.isSupported && school.hasUrl
+    val isDlmu = school.name == "大连海事大学"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(SleepyTheme.shapes.medium)
+            .background(colors.primaryContainer.copy(alpha = SleepyTheme.Alpha.inactive))
+            .then(if (isClickable) Modifier.noRippleClickable(onClick) else Modifier)
+            .padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 图标
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(SleepyTheme.shapes.small)
+                    .background(colors.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = null,
+                    tint = colors.onPrimary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.size(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // 推荐徽章
+                    Box(
+                        modifier = Modifier
+                            .clip(SleepyTheme.shapes.small)
+                            .background(colors.primary)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.school_recommended_tag),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = colors.onPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.size(6.dp))
+                    SchoolStatusBadge(school = school)
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(
+                        text = school.name,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = if (isClickable) colors.onSurface else colors.onSurfaceVariant
+                    )
+                }
+                if (!school.url.isBlank()) {
+                    Spacer(modifier = Modifier.size(2.dp))
+                    Text(
+                        text = JwProtocol.displayName(school.type) + " · " + school.url.replace("https://", "").replace("http://", "").trimEnd('/'),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        // 大连海事大学专属：内网 / VPN 提示
+        if (isDlmu) {
+            Spacer(modifier = Modifier.size(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(SleepyTheme.shapes.small)
+                    .background(colors.surfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = colors.tertiary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    text = stringResource(R.string.dlmu_intranet_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant
+                )
+            }
+        }
     }
 }

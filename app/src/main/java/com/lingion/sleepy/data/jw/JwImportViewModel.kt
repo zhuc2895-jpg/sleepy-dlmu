@@ -169,7 +169,8 @@ class JwImportViewModel(application: Application) : AndroidViewModel(application
                             }
                         },
                     aliases = aliases,
-                    sortKeyFull = obj.optString("sortKeyFull", "")
+                    sortKeyFull = obj.optString("sortKeyFull", ""),
+                    enableFetch = obj.optBoolean("enableFetch", false)
                 )
             }
             return list

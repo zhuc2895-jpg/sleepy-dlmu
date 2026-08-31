@@ -3,6 +3,130 @@
 </p>
 
 <h1 align="center">Sleepy · 轻课表</h1>
+<h3 align="center">🌊 大连海事大学教务系统定制版 · DLMU Edition</h3>
+
+<p align="center">
+  <strong>⚓ 内置大连海事大学 URP 教务直连 / 海事蓝专属主题 / 热门推荐置顶一键导入</strong>
+</p>
+
+<p align="center">
+  🔱 基于 <a href="https://github.com/lingion/sleepy">lingion/sleepy</a> 二次开发 · 原作者 © <a href="https://github.com/lingion">lingion</a><br>
+  🔧 定制开发：<a href="https://github.com/zhuc2895-jpg">HK416</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/zhuc2895-jpg/sleepy-dlmu/releases/tag/v1.0.41-dlmu"><img src="https://img.shields.io/badge/DLMU_Download-v1.0.41--dlmu-004A7C?style=flat-square&logo=android&logoColor=white" alt="DLMU APK 下载"></a>
+  <a href="https://github.com/zhuc2895-jpg/sleepy-dlmu/releases"><img src="https://img.shields.io/github/v/release/zhuc2895-jpg/sleepy-dlmu?style=flat-square&label=Release" alt="Latest Release"></a>
+  <a href="https://github.com/lingion/sleepy"><img src="https://img.shields.io/badge/upstream-lingion%2Fsleepy-7f52ff?style=flat-square&logo=github" alt="Upstream"></a>
+  <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android">
+  <img src="https://img.shields.io/badge/lang-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin">
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square" alt="License">
+</p>
+
+<p align="center">
+  <a href="#大连海事-定制特性">DLMU 特性</a> ·
+  <a href="#apkv1041-dlmu-快速下载">APK 下载</a> ·
+  <a href="#定制改动日志-changelog">改动日志</a> ·
+  <a href="#构建说明">构建说明</a> ·
+  <a href="README.md">中文</a> ·
+  <a href="https://github.com/lingion/sleepy/blob/master/README.md">原项目 README</a>
+</p>
+
+---
+
+## ⚓ 大连海事 定制特性
+
+本仓库为 **大连海事大学（Dalian Maritime University, DLMU）** 专门适配的 Sleepy 轻课表。
+
+| 功能 | 说明 |
+|------|------|
+| 🎯 **学校置顶推荐** | 学校选择页顶部「⭐ 热门推荐」首项即大连海事大学，含「推荐」徽章 + 内网 / VPN 访问提示，无需搜索 |
+| 📘 **URP 教务协议** | 自动匹配大连海事 URP 综合教务管理系统（清元优软 URP_NEW 协议），通过内置 `JwNewUrpParser` 解析 JSON 课表 |
+| 🌊 **海事蓝主题** | 新增一套 **Maritime（海事蓝）** Material 3 配色，灵感来自海事大学校园色系，设置 → 外观 → 主题一键切换 |
+| 🔍 **别名快速搜索** | 搜索 `dlmu` / `海事大学` / `海大` 均可直接定位到大连海事大学 |
+| 🛡️ **安全 fetch 开关** | `enableFetch=false`，默认不向未验证的教务发送 fetch 请求，防止意外 0 课结果 |
+
+> **使用提示**：大连海事大学教务系统 **需在校内网络或 VPN 环境**下访问。启动 App → 导入课表 → 教务系统直连 → 点顶部「大连海事大学」卡片 → 登录即可自动导入。
+
+---
+
+## 📦 APK（v1.0.41-dlmu）快速下载
+
+Release：<https://github.com/zhuc2895-jpg/sleepy-dlmu/releases/tag/v1.0.41-dlmu>
+
+| 版本 | 架构 | 推荐场景 |
+|------|------|----------|
+| [sleepy-1.0.41-dlmu-arm64-v8a.apk](https://github.com/zhuc2895-jpg/sleepy-dlmu/releases/download/v1.0.41-dlmu/sleepy-1.0.41-dlmu-arm64-v8a.apk) | ARM64 v8a | ✅ **绝大多数手机**（华为 / 小米 / OPPO / vivo / 三星 / 荣耀 等） |
+| [sleepy-1.0.41-dlmu-armeabi-v7a.apk](https://github.com/zhuc2895-jpg/sleepy-dlmu/releases/download/v1.0.41-dlmu/sleepy-1.0.41-dlmu-armeabi-v7a.apk) | ARMv7 | 老旧 32 位安卓设备 |
+| [sleepy-1.0.41-dlmu-x86_64.apk](https://github.com/zhuc2895-jpg/sleepy-dlmu/releases/download/v1.0.41-dlmu/sleepy-1.0.41-dlmu-x86_64.apk) | x86_64 | Android 模拟器 / Windows 安卓子系统 / 平板 |
+
+---
+
+## 📝 定制改动日志 CHANGELOG
+
+详见 [`CHANGELOG-DLMU.md`](CHANGELOG-DLMU.md)。
+
+快速摘要（`v1.0.41-dlmu`）：
+
+1. ✅ `app/src/main/assets/schools.json`：新增大连海事大学条目（type=`urp_new`，别名 `dlmu` / `海事大学` / `海大`，enableFetch=false）
+2. ✅ `app/src/main/java/.../data/jw/JwImportViewModel.kt`：`parseSchoolsJson` 补充 `enableFetch` 字段解析
+3. ✅ `app/src/main/java/.../ui/theme/ThemePresets.kt`：新增 **Maritime（海事蓝）** Light/Dark 双主题，加入 `ThemePresets.all`
+4. ✅ `app/src/main/res/values/strings.xml`：新增 `theme_name_maritime`、`school_recommended`、`school_recommended_tag`、`dlmu_intranet_hint` 四组字符串
+5. ✅ `app/src/main/java/.../ui/screen/imports/SchoolSelectScreen.kt`：新增「⭐ 热门推荐」置顶卡片区域（含推荐徽章 + DLMU 内网提示）
+6. ✅ 构建适配：`compileSdk/targetSdk` 36（沙盒构建基线）、gradle.properties 加入代理与内存配置
+7. ✅ 签名：Debug 内置签名配置，Release 直接复用
+
+---
+
+## 🔧 构建说明
+
+如需自行构建：
+
+```bash
+# 1. 环境要求
+#    JDK 17+  ·  Gradle 9.3.1（wrapper 自动下载）  ·  Android SDK（platform 36 + build-tools 36）
+export ANDROID_HOME=/path/to/sdk
+export JAVA_HOME=/path/to/jdk-17
+
+# 2. Debug APK
+./gradlew :app:assembleDebug
+# 产物：app/build/outputs/apk/debug/app-<abi>-debug.apk
+
+# 3. Release APK（需自行配置签名）
+./gradlew :app:assembleRelease
+```
+
+本仓库 Release 版本使用 Debug 临时签名，仅作体验用途。生产分发请替换为自己的 keystore。
+
+---
+
+## 🙏 原作者 & 许可
+
+**上游项目：[lingion/sleepy](https://github.com/lingion/sleepy)** · 作者 [@lingion](https://github.com/lingion) · License GPL-3.0
+
+本仓库严格遵循上游 GPL-3.0 许可开放源码。所有定制改动均在本 README 与 [`CHANGELOG-DLMU.md`](CHANGELOG-DLMU.md) 中明确标注。
+
+```
+Sleepy · 轻课表  —  Copyright (C) lingion
+Sleepy · DLMU 定制版  —  Copyright (C) 2026 HK416 (基于 lingion/sleepy 二次开发)
+本程序是自由软件，您可以在 GPL-3.0 条款下再分发和/或修改它。
+```
+
+---
+
+> **Keywords (DLMU SEO):** 大连海事大学 课表, DLMU schedule, 大连海事教务系统, URP 教务, 海事大学课程表, 海大课表App
+
+---
+
+<!-- 原项目 README 正文保留，向下兼容 -->
+
+<p align="center">
+  <img src="docs/logo.png" width="120">
+</p>
+
+<h2 align="center">⬇ 以下为原版 Sleepy · 轻课表 README ⬇</h2>
+
+<h1 align="center">Sleepy · 轻课表</h1>
 
 <p align="center">
   A clean, Material You Android schedule/timetable app built with Kotlin + Jetpack Compose.<br>
@@ -21,7 +145,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">中文</a> · <a href="https://github.com/lingion/sleepy/releases">Download APK</a>
+  <a href="README.md">中文</a> · <a href="https://github.com/lingion/sleepy/releases">Download APK (原版)</a>
 </p>
 
 ---

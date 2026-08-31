@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.lingion.sleepy"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.lingion.sleepy"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 42
-        versionName = "1.0.41"
+        versionName = "1.0.41-dlmu"
         vectorDrawables { useSupportLibrary = true }
         androidResources {
             localeFilters += listOf("zh-rCN", "zh-rTW", "en", "ja", "es")
