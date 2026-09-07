@@ -1,5 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#FFFAF8F2</color>
-    <color name="brand_primary">#FF6750A4</color>
-    <color name="brand_on_primary">#FFFFFFFF</color>
+    <color name="bg_deep">#02030a</color>
+    <color name="cyan">#00e5ff</color>
 </resources>

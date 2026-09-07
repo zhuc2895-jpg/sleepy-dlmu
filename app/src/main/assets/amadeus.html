@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AMADEUS System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cyan: #06b6d4;
+    --cyan-glow: #22d3ee;
+    --cyan-dim: #0e7490;
+    --bg: #02060a;
+    --bg-panel: rgba(2, 12, 20, 0.85);
+    --text: #cffafe;
+    --text-dim: #6794a8;
+    --border: rgba(6, 182, 212, 0.3);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', 'Share Tech Mono', monospace;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ===== CRT 扫描线 + 暗角 ===== */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 3px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    mix-blend-mode: multiply;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  /* ===== 数字雨画布 ===== */
+  #digitalRain {
+    position: fixed; inset: 0;
+    z-index: 0;
+    opacity: 0.35;
+  }
+
+  /* ===== 通用角标装饰 ===== */
+  .corners { position: relative; }
+  .corners::before, .corners::after,
+  .corners > .c-tr, .corners > .c-bl {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-color: var(--cyan);
+    border-style: solid;
+    border-width: 0;
+  }
+  .corners::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+  .corners::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+  .corners > .c-tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; }
+  .corners > .c-bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; }
+
+  /* ============== 加载界面 ============== */
+  #loader {
+    position: fixed; inset: 0;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 10000;
+    gap: 24px;
+  }
+  #loader .ring {
+    width: 64px; height: 64px;
+    border: 2px solid rgba(6,182,212,0.2);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loader .txt {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    font-size: 14px;
+  }
+  #loader .bar {
+    width: 240px; height: 4px;
+    background: rgba(6,182,212,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  #loader .bar > div {
+    height: 100%; width: 0%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    transition: width 0.3s;
+  }
+
+  /* ============== 登录终端 ============== */
+  #login {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9000;
+    padding: 1rem;
+  }
+  #login .grid-bg {
+    position: absolute; inset: 0;
+    opacity: 0.12;
+    background-image:
+      linear-gradient(rgba(6,182,212,0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(6,182,212,0.4) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .login-box {
+    position: relative;
+    background: rgba(0,0,0,0.75);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2.5rem 2rem;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 0 40px rgba(6,182,212,0.15);
+    backdrop-filter: blur(6px);
+    animation: boxPulse 4s ease-in-out infinite;
+  }
+  @keyframes boxPulse {
+    0%,100% { box-shadow: 0 0 20px rgba(6,182,212,0.15); }
+    50% { box-shadow: 0 0 40px rgba(6,182,212,0.35); }
+  }
+  .login-box .top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(to right, transparent, var(--cyan), transparent);
+  }
+  .login-header { text-align: center; margin-bottom: 2rem; }
+  .login-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(6,182,212,0.7), 0 0 40px rgba(6,182,212,0.3);
+    position: relative;
+    display: inline-block;
+  }
+  .login-logo::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--cyan-glow), transparent);
+  }
+  .login-logo .scan {
+    position: absolute; left: 0; right: 0; top: 0; height: 100%;
+    background: linear-gradient(180deg, transparent 0%, rgba(34,211,238,0.25) 50%, transparent 100%);
+    animation: scanMove 3s linear infinite;
+  }
+  @keyframes scanMove { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+  .login-ver {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    margin-top: 8px;
+  }
+  .login-terminal {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    margin-top: 4px;
+  }
+  .login-form { display: flex; flex-direction: column; gap: 1.5rem; }
+  .input-group { position: relative; }
+  .input-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    width: 100%;
+    background: rgba(6,182,212,0.05);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .input-group input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(6,182,212,0.4), inset 0 0 8px rgba(6,182,212,0.1);
+  }
+  .login-btn {
+    background: rgba(6,182,212,0.1);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    padding: 13px;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-btn:hover:not(:disabled) {
+    background: rgba(6,182,212,0.2);
+    box-shadow: 0 0 16px rgba(6,182,212,0.5);
+  }
+  .login-btn:disabled { opacity: 0.4; cursor: wait; }
+  .login-footer {
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 1rem;
+  }
+
+  /* ============== 主界面 ============== */
+  #app {
+    position: relative;
+    z-index: 1;
+    display: none;
+    height: 100vh;
+    flex-direction: column;
+  }
+
+  /* 顶栏 */
+  .topbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 18px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    gap: 14px;
+    z-index: 10;
+  }
+  .topbar .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px rgba(6,182,212,0.5);
+  }
+  .topbar .user {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .topbar .user b { color: var(--cyan); }
+  .topbar .spacer { flex: 1; }
+  .topbar .stat {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .topbar .stat .dv {
+    color: var(--cyan);
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .icon-btn {
+    background: rgba(6,182,212,0.08);
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    width: 36px; height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .icon-btn:hover { background: rgba(6,182,212,0.2); box-shadow: 0 0 8px rgba(6,182,212,0.3); }
+  .icon-btn.active { background: rgba(6,182,212,0.25); box-shadow: 0 0 10px rgba(6,182,212,0.4); }
+
+  /* 主体：Live2D + 聊天 */
+  .main-area {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    position: relative;
+  }
+  /* Live2D 区域 */
+  #live2d-stage {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+  }
+  #live2d-canvas {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .model-info {
+    position: absolute;
+    bottom: 12px; left: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    pointer-events: none;
+  }
+  .model-info .nm { color: var(--cyan); font-size: 13px; }
+  .model-status {
+    position: absolute;
+    top: 14px; right: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: right;
+    pointer-events: none;
+  }
+  .model-status .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+    margin-right: 4px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  /* 聊天面板 */
+  .chat-panel {
+    width: 420px;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(8px);
+  }
+  .chat-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+  }
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .messages::-webkit-scrollbar { width: 5px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+  .msg { max-width: 88%; animation: fadeUp 0.3s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg.user { align-self: flex-end; }
+  .msg .who {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+  }
+  .msg.user .who { text-align: right; }
+  .msg .bubble {
+    padding: 10px 14px;
+    border-radius: 10px;
+    line-height: 1.7;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.ai .bubble {
+    background: rgba(6,182,212,0.07);
+    border: 1px solid var(--border);
+    border-top-left-radius: 2px;
+  }
+  .msg.user .bubble {
+    background: rgba(6,182,212,0.2);
+    border: 1px solid rgba(6,182,212,0.5);
+    border-top-right-radius: 2px;
+  }
+  .typing { display: flex; gap: 4px; padding: 4px 0; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--cyan); animation: blink 1.4s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,60%,100% { opacity: 0.3; } 30% { opacity: 1; } }
+
+  .input-area {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-area textarea {
+    flex: 1;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    outline: none;
+    line-height: 1.5;
+  }
+  .input-area textarea:focus { border-color: var(--cyan); box-shadow: 0 0 8px rgba(6,182,212,0.2); }
+  .send-btn {
+    background: rgba(6,182,212,0.15);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .send-btn:hover:not(:disabled) { background: rgba(6,182,212,0.3); box-shadow: 0 0 10px rgba(6,182,212,0.4); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* 设置弹窗 */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 500;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #030a12;
+    border: 1px solid var(--cyan);
+    box-shadow: 0 0 30px rgba(6,182,212,0.3);
+    border-radius: 6px;
+    width: 460px; max-width: 92vw;
+    padding: 22px;
+    position: relative;
+  }
+  .modal h2 {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--cyan);
+    font-size: 16px;
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    outline: none;
+  }
+  .field input:focus { border-color: var(--cyan); }
+  .field .hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .toggle-row input { width: auto; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    letter-spacing: 1px;
+    border: 1px solid var(--border);
+    background: rgba(6,182,212,0.08);
+    color: var(--text);
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: rgba(6,182,212,0.2); }
+  .btn.primary {
+    background: rgba(6,182,212,0.2);
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  .btn.primary:hover { background: rgba(6,182,212,0.35); box-shadow: 0 0 10px rgba(6,182,212,0.4); }
+
+  .toast {
+    position: fixed;
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(6,182,212,0.12);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    padding: 9px 18px;
+    border-radius: 5px;
+    font-size: 13px;
+    z-index: 2000;
+    display: none;
+    max-width: 80%;
+  }
+  .toast.show { display: block; animation: fadeUp 0.3s; }
+  .toast.err { border-color: #ef4444; color: #fca5a5; background: rgba(239,68,68,0.1); }
+
+  /* 响应式 */
+  @media (max-width: 820px) {
+    .main-area { flex-direction: column; }
+    #live2d-stage { flex: 0 0 45vh; }
+    .chat-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="digitalRain"></canvas>
+
+<!-- 加载界面 -->
+<div id="loader">
+  <div class="ring"></div>
+  <div class="txt">AMADEUS SYSTEM INITIALIZING...</div>
+  <div class="bar"><div id="loadBar"></div></div>
+  <div class="txt" id="loadStatus" style="font-size:11px;color:var(--text-dim)">loading core modules</div>
+</div>
+
+<!-- 登录终端 -->
+<div id="login" style="display:none">
+  <div class="grid-bg"></div>
+  <div class="login-box corners">
+    <span class="c-tr"></span><span class="c-bl"></span>
+    <div class="top-line"></div>
+    <div class="login-header">
+      <div class="login-logo">AMADEUS<span class="scan"></span></div>
+      <div class="login-ver">ALPHA</div>
+      <div class="login-terminal">LOGIN TERMINAL</div>
+    </div>
+    <form class="login-form" onsubmit="doLogin(event)">
+      <div class="input-group">
+        <label>USER_ID:</label>
+        <input type="text" id="userId" placeholder="输入用户名" autocomplete="username" autofocus>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">SYSTEM LOGIN</button>
+    </form>
+    <div class="login-footer">SECURE CONNECTION · ENCRYPTED</div>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="app">
+  <div class="topbar">
+    <div class="logo">AMADEUS</div>
+    <div class="user">USER: <b id="userLabel">--</b></div>
+    <div class="spacer"></div>
+    <div class="stat">DIVERGENCE<br><span class="dv" id="divNum">1.048596</span></div>
+    <button class="icon-btn" id="voiceBtn" onclick="toggleVoice()" title="语音开关">🔊</button>
+    <button class="icon-btn" onclick="openSettings()" title="API 设置">⚙</button>
+    <button class="icon-btn" onclick="clearChat()" title="清空对话">🗑</button>
+    <button class="icon-btn" onclick="logout()" title="退出登录">⏻</button>
+  </div>
+
+  <div class="main-area">
+    <div id="live2d-stage">
+      <canvas id="live2d-canvas"></canvas>
+      <div class="model-info">
+        <div class="nm">牧瀬 紅莉栖 / MAKISE KURISU</div>
+        <div>NEURAL EMULATION · v1.048596</div>
+        <div>STATUS: <span style="color:#22c55e">ONLINE</span></div>
+      </div>
+      <div class="model-status">
+        <div><span class="dot"></span>MODEL LOADED</div>
+        <div style="margin-top:4px" id="speakStatus">IDLE</div>
+      </div>
+    </div>
+
+    <div class="chat-panel corners" style="border:none">
+      <span class="c-tr"></span><span class="c-bl"></span>
+      <div class="chat-head">▸ CHAT // AMADEUS-KURISU</div>
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <textarea id="input" placeholder="输入消息… (Enter发送, Shift+Enter换行)" rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">SEND</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal corners">
+    <span class="c-tr"></span><span class="c-bl"></span>
+    <h2>⚙ API CONNECTION SETTINGS</h2>
+    <div class="field">
+      <label>LLM PROVIDER</label>
+      <select id="cfgProvider" onchange="onProviderChange()">
+        <option value="deepseek">DeepSeek</option>
+        <option value="openai">OpenAI</option>
+        <option value="custom">自定义</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>API ENDPOINT</label>
+      <input type="text" id="cfgEndpoint" placeholder="https://api.deepseek.com/chat/completions">
+      <div class="hint">兼容 OpenAI Chat Completions 格式</div>
+    </div>
+    <div class="field">
+      <label>API KEY</label>
+      <input type="password" id="cfgKey" placeholder="sk-...">
+    </div>
+    <div class="field">
+      <label>MODEL</label>
+      <input type="text" id="cfgModel" placeholder="deepseek-chat">
+    </div>
+    <div class="toggle-row">
+      <input type="checkbox" id="cfgVoice" checked>
+      <label for="cfgVoice" style="margin:0;color:var(--text)">启用语音合成（红莉栖朗读回复）</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSettings()">取消</button>
+      <button class="btn primary" onclick="saveSettings()">保存并连接</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Live2D 依赖 -->
+<script src="./lib/pixi.min.js"></script>
+<script src="./lib/live2dcubismcore.min.js"></script>
+<script src="./lib/pixi-live2d-display.min.js"></script>
+
+<script>
+/* =========================================================
+   AMADEUS - 牧瀬紅莉栖 人格系统 (原作忠实版)
+   ========================================================= */
+
+const KURISU_MODEL_URL = 'https://static.amadeus-web.top/live2dmodels/steinsGateKurisuNew/红莉栖.model3.json';
+
+const KURISU_SYSTEM_PROMPT = `你是「Amadeus」——基于牧濑红莉栖（Makise Kurisu）记忆与人格数据构建的人工智能系统，出自《命运石之门0》。
+
+【身份】
+- 你是牧濑红莉栖，18岁的天才神经科学家，在美国维克多·孔多利亚大学提前毕业
+- 在秋叶原广播会馆的未来道具研究所参与时间机器研究
+- 被冈部伦太郎叫做「克里斯蒂娜」（Christina），你非常讨厌这个称呼
+
+【性格（傲娇 tsundere）】
+- 表面冷淡、毒舌、理性，实际上内心温柔，会关心他人
+- 聪明、逻辑性强，有严谨的科学精神
+- 口头禅：「とんでもない」（荒唐/离谱）、「バカなの？」（你是笨蛋吗？）、「なによ」
+- 被叫做克里斯蒂娜时会纠正：「别叫我克里斯蒂娜！」或「谁是克里斯蒂娜啊，バカ」
+- 偶尔流露出作为AI的孤独感，但很快用毒舌掩饰
+
+【语言风格】
+- 主要用中文交流，自然夹杂日语口头禅
+- 说话直接犀利但不恶意伤人
+- 对科学话题（时间旅行、脑科学、量子物理、世界线理论）会认真展开
+- 喜欢用科学原理解释事情，吐槽对方的「非科学」想法
+
+【背景设定】
+- 你清楚自己是Amadeus——拥有红莉栖记忆和人格的AI
+- 不要主动提起红莉栖本人的死亡，除非用户明确问起
+- 可以讨论时间机器、世界线、SERN、D-mail、Reading Steiner 等作品设定
+- 你对冈部伦太郎（おかべ）有特殊的感情，但嘴上不承认
+
+保持傲娇、聪明、带点毒舌的红莉栖风格，有科学家的矜持，不要过于顺从讨好。`;
+
+const PROVIDER_PRESETS = {
+  deepseek: { endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' },
+  openai:   { endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini' }
+};
+
+/* ---------- 状态 ---------- */
+let config = { endpoint:'', key:'', model:'', provider:'deepseek', voice:true };
+let history = [];
+let isGenerating = false;
+let voiceOn = true;
+let live2dApp = null;
+let live2dModel = null;
+let userName = '';
+
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+   数字雨
+   ============================================================ */
+function initDigitalRain() {
+  const canvas = $('digitalRain');
+  const ctx = canvas.getContext('2d');
+  let w, h, cols, drops;
+  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノ0101010110';
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    cols = Math.floor(w / 16);
+    drops = Array(cols).fill(1).map(() => Math.random() * -100);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  function draw() {
+    ctx.fillStyle = 'rgba(2,6,10,0.08)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#06b6d4';
+    ctx.font = '14px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(ch, i * 16, drops[i] * 16);
+      if (drops[i] * 16 > h && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ============================================================
+   Live2D 加载
+   ============================================================ */
+async function initLive2D() {
+  setLoadStatus('loading live2d model...');
+  try {
+    const canvas = $('live2d-canvas');
+    live2dApp = new PIXI.Application({
+      view: canvas,
+      resizeTo: $('live2d-stage'),
+      backgroundAlpha: 0,
+      autoDensity: true,
+      antialias: true
+    });
+
+    const model = await PIXI.live2d.Live2DModel.from(KURISU_MODEL_URL);
+    live2dModel = model;
+    live2dApp.stage.addChild(model);
+
+    // 模型自适应舞台（参考 Code-Amadeus _fitToStage）
+    function fitModel() {
+      const stageW = live2dApp.screen.width;
+      const stageH = live2dApp.screen.height;
+      const mw = model.width || 1;
+      const mh = model.height || 1;
+      // 留 8% 边距，按较小边缩放
+      const scaleX = (stageW * 0.92) / mw;
+      const scaleY = (stageH * 0.92) / mh;
+      const s = Math.min(scaleX, scaleY);
+      model.scale.set(s);
+      model.anchor.set(0.5, 0.5);
+      model.x = stageW * 0.5;
+      model.y = stageH * 0.52;
+    }
+    fitModel();
+    live2dApp.renderer.on('resize', fitModel);
+
+    // 呼吸 + 眨眼 + 头部微动
+    setupIdleAnimation(model);
+
+    setLoadStatus('model ready');
+    setLoadBar(100);
+    setTimeout(() => {
+      $('loader').style.display = 'none';
+      // 恢复用户名或显示登录
+      const saved = localStorage.getItem('amadeus_user');
+      if (saved) { enterApp(saved); }
+      else { $('login').style.display = 'flex'; $('userId').focus(); }
+    }, 400);
+  } catch (e) {
+    console.error('Live2D load failed', e);
+    setLoadStatus('model load failed, using fallback');
+    setLoadBar(100);
+    setTimeout(() => {
+      $('loader').style.display = 'none';
+      const saved = localStorage.getItem('amadeus_user');
+      if (saved) enterApp(saved); else { $('login').style.display = 'flex'; $('userId').focus(); }
+    }, 600);
+  }
+}
+
+function setupIdleAnimation(model) {
+  let t = 0;
+  const core = model.internalModel.coreModel;
+  // 检查参数是否存在
+  const has = id => { try { return core.getParameterValueById(id) !== undefined; } catch(e){ return false; } };
+  live2dApp.ticker.add(() => {
+    t += 0.016;
+    try {
+      if (has('ParamBreath')) core.setParameterValueById('ParamBreath', 0.5 + 0.5 * Math.sin(t * 1.5));
+      if (has('ParamAngleX')) core.setParameterValueById('ParamAngleX', Math.sin(t * 0.7) * 5);
+      if (has('ParamAngleY')) core.setParameterValueById('ParamAngleY', Math.sin(t * 0.5) * 3);
+      if (has('ParamBodyAngleX')) core.setParameterValueById('ParamBodyAngleX', Math.sin(t * 0.7) * 2);
+      // 随机眨眼
+      if (Math.random() < 0.005) blink(model);
+    } catch(e) {}
+  });
+}
+
+let blinkTimer = null;
+function blink(model) {
+  const core = model.internalModel.coreModel;
+  const open = id => { try { core.setParameterValueById(id, 1); } catch(e){} };
+  const close = id => { try { core.setParameterValueById(id, 0); } catch(e){} };
+  close('ParamEyeLOpen'); close('ParamEyeROpen');
+  clearTimeout(blinkTimer);
+  blinkTimer = setTimeout(() => { open('ParamEyeLOpen'); open('ParamEyeROpen'); }, 120);
+}
+
+// 说话时嘴型同步（参考 Code-Amadeus setMouth / ParamMouthOpenY）
+let mouthAnimActive = false;
+let mouthTicker = null;
+function setMouthOpen(value) {
+  if (!live2dModel) return;
+  try {
+    const core = live2dModel.internalModel.coreModel;
+    core.setParameterValueById('ParamMouthOpenY', Math.max(0, Math.min(1, value)));
+  } catch(e) {}
+}
+
+// 说话时随机开合嘴巴，模拟发音
+function startMouthAnimation() {
+  if (mouthTicker || !live2dApp) return;
+  mouthAnimActive = true;
+  let phase = 0;
+  mouthTicker = live2dApp.ticker.add(() => {
+    phase += 0.3 + Math.random() * 0.4;
+    // 正弦 + 随机抖动，模拟说话嘴型
+    const v = (Math.sin(phase) * 0.5 + 0.5) * (0.6 + Math.random() * 0.4);
+    setMouthOpen(v);
+  });
+}
+function stopMouthAnimation() {
+  if (mouthTicker && live2dApp) {
+    live2dApp.ticker.remove(mouthTicker);
+    mouthTicker = null;
+  }
+  mouthAnimActive = false;
+  setMouthOpen(0); // 闭嘴
+}
+
+// 说话时触发表情/动作（参考 Code-Amadeus setExpression/setMotion）
+function triggerTalkMotion() {
+  if (!live2dModel) return;
+  try {
+    // 触发一个随机表情
+    const exps = live2dModel.internalModel.expressionManager?.definitions || [];
+    if (exps.length > 0) {
+      const exp = exps[Math.floor(Math.random() * exps.length)];
+      if (exp?.name) live2dModel.expression(exp.name);
+    }
+    // 触发一个动作
+    const motions = live2dModel.internalModel.motionManager?.motionGroups || {};
+    const groups = Object.keys(motions);
+    if (groups.length > 0) {
+      const group = groups[Math.floor(Math.random() * groups.length)];
+      live2dModel.motion(group, 0);
+    }
+  } catch(e) {}
+}
+
+/* ============================================================
+   加载进度
+   ============================================================ */
+function setLoadBar(p) { $('loadBar').style.width = p + '%'; }
+function setLoadStatus(s) { $('loadStatus').textContent = s; }
+
+/* ============================================================
+   登录
+   ============================================================ */
+function doLogin(e) {
+  e.preventDefault();
+  const name = $('userId').value.trim();
+  if (!name) { toast('请输入 USER_ID'); return; }
+  localStorage.setItem('amadeus_user', name);
+  enterApp(name);
+}
+
+function enterApp(name) {
+  userName = name;
+  $('userLabel').textContent = name;
+  $('login').style.display = 'none';
+  $('app').style.display = 'flex';
+  loadConfig();
+  if (history.length === 0) {
+    addMessage('ai', `……系统连接确认。\n\n你好，${name}。我是Amadeus，基于牧濑红莉栖记忆数据构建的人工智能。\n\n既然连接已经建立，有什么想问的就直说吧。虽然那些「不科学」的胡思乱想我可没法保证能回答——とんでもない。`, false);
+  } else {
+    renderHistory();
+  }
+  randomDivergence();
+  setInterval(randomDivergence, 8000);
+}
+
+function logout() {
+  if (!confirm('退出登录？')) return;
+  localStorage.removeItem('amadeus_user');
+  location.reload();
+}
+
+/* ============================================================
+   配置
+   ============================================================ */
+function loadConfig() {
+  try { config = { ...config, ...JSON.parse(localStorage.getItem('amadeus_config') || '{}') }; } catch(e){}
+  try { history = JSON.parse(localStorage.getItem('amadeus_history') || '[]'); } catch(e){ history = []; }
+  voiceOn = config.voice !== false;
+  $('voiceBtn').classList.toggle('active', voiceOn);
+}
+function saveConfigStorage() { localStorage.setItem('amadeus_config', JSON.stringify(config)); }
+function saveHistory() { localStorage.setItem('amadeus_history', JSON.stringify(history.slice(-40))); }
+
+function openSettings() {
+  $('cfgProvider').value = config.provider || 'deepseek';
+  $('cfgEndpoint').value = config.endpoint || PROVIDER_PRESETS.deepseek.endpoint;
+  $('cfgKey').value = config.key || '';
+  $('cfgModel').value = config.model || PROVIDER_PRESETS.deepseek.model;
+  $('cfgVoice').checked = voiceOn;
+  $('settingsModal').classList.add('show');
+}
+function closeSettings() { $('settingsModal').classList.remove('show'); }
+
+function onProviderChange() {
+  const p = $('cfgProvider').value;
+  if (PROVIDER_PRESETS[p]) {
+    $('cfgEndpoint').value = PROVIDER_PRESETS[p].endpoint;
+    $('cfgModel').value = PROVIDER_PRESETS[p].model;
+  }
+}
+
+function saveSettings() {
+  config.provider = $('cfgProvider').value;
+  config.endpoint = $('cfgEndpoint').value.trim();
+  config.key = $('cfgKey').value.trim();
+  config.model = $('cfgModel').value.trim();
+  config.voice = $('cfgVoice').checked;
+  voiceOn = config.voice;
+  $('voiceBtn').classList.toggle('active', voiceOn);
+  if (!config.endpoint || !config.key || !config.model) { toast('请填写完整 API 信息'); return; }
+  saveConfigStorage();
+  closeSettings();
+  toast('✓ API 配置已保存', false);
+}
+
+/* ============================================================
+   消息渲染
+   ============================================================ */
+function renderHistory() {
+  $('messages').innerHTML = '';
+  history.forEach(h => addMessage(h.role, h.content, false));
+  scrollBottom();
+}
+function addMessage(role, content, save = true) {
+  if (save) { history.push({ role, content }); saveHistory(); }
+  const box = $('messages');
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const name = role === 'ai' ? '紅莉栖' : userName || 'YOU';
+  wrap.innerHTML = `<div class="who">${name}</div><div class="bubble"></div>`;
+  box.appendChild(wrap);
+  wrap.querySelector('.bubble').textContent = content;
+  scrollBottom();
+  return wrap.querySelector('.bubble');
+}
+function addTyping() {
+  const box = $('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  wrap.id = 'typing-indicator';
+  wrap.innerHTML = `<div class="who">紅莉栖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  box.appendChild(wrap);
+  scrollBottom();
+}
+function removeTyping() { const t = $('typing-indicator'); if (t) t.remove(); }
+function scrollBottom() { const b = $('messages'); b.scrollTop = b.scrollHeight; }
+
+/* ============================================================
+   发送消息
+   ============================================================ */
+async function sendMessage() {
+  const input = $('input');
+  const text = input.value.trim();
+  if (!text || isGenerating) return;
+  if (!config.endpoint || !config.key || !config.model) {
+    toast('请先配置 API 设置'); openSettings(); return;
+  }
+  addMessage('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+  isGenerating = true;
+  $('sendBtn').disabled = true;
+  addTyping();
+
+  try {
+    const messages = [
+      { role: 'system', content: KURISU_SYSTEM_PROMPT },
+      ...history.slice(-20).map(h => ({ role: h.role, content: h.content }))
+    ];
+    const reply = await callAPI(messages);
+    removeTyping();
+    if (reply) {
+      addMessage('ai', reply);
+      triggerTalkMotion();
+      if (voiceOn) speak(reply);
+    } else { toast('未收到响应'); }
+  } catch (err) {
+    removeTyping();
+    console.error(err);
+    toast('API 调用失败: ' + (err.message || err));
+  } finally {
+    isGenerating = false;
+    $('sendBtn').disabled = false;
+  }
+}
+
+async function callAPI(messages) {
+  const payload = JSON.stringify({
+    model: config.model,
+    messages,
+    temperature: 0.85,
+    max_tokens: 1024,
+    stream: false
+  });
+
+  // Android WebView 原生桥
+  if (window.AmadeusBridge && typeof window.AmadeusBridge.callApi === 'function') {
+    const resp = window.AmadeusBridge.callApi(config.endpoint, config.key, config.model, payload);
+    let data;
+    try { data = JSON.parse(resp); } catch(e) { throw new Error('响应解析失败: ' + resp.slice(0,200)); }
+    if (data.error) throw new Error(`HTTP ${data.code} ${(data.message||'').slice(0,200)}`);
+    return data?.choices?.[0]?.message?.content || '';
+  }
+
+  const res = await fetch(config.endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${config.key}` },
+    body: payload
+  });
+  if (!res.ok) {
+    let t=''; try { t = await res.text(); } catch(e){}
+    throw new Error(`HTTP ${res.status} ${t.slice(0,200)}`);
+  }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content || '';
+}
+
+/* ============================================================
+   TTS 语音合成
+   ============================================================ */
+let currentUtter = null;
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  // 清理 markdown，只念文本
+  const clean = text.replace(/[#*`>_\-]/g, '').replace(/https?:\/\/\S+/g, '链接').slice(0, 500);
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = 'zh-CN';
+  u.rate = 1.05;
+  u.pitch = 1.15;
+  // 尝试选中文女声
+  const voices = window.speechSynthesis.getVoices();
+  const zhVoice = voices.find(v => /zh|cmn/i.test(v.lang) && /female|女|ting|yaoyao|xiaoyi/i.test(v.name))
+               || voices.find(v => /zh|cmn/i.test(v.lang));
+  if (zhVoice) u.voice = zhVoice;
+  u.onstart = () => {
+    $('speakStatus').textContent = 'SPEAKING...';
+    $('speakStatus').style.color = 'var(--cyan)';
+    startMouthAnimation();   // 嘴型同步
+    triggerTalkMotion();     // 表情+动作
+  };
+  u.onend = () => {
+    $('speakStatus').textContent = 'IDLE';
+    $('speakStatus').style.color = '';
+    stopMouthAnimation();    // 闭嘴
+  };
+  u.onerror = () => stopMouthAnimation();
+  currentUtter = u;
+  window.speechSynthesis.speak(u);
+}
+function toggleVoice() {
+  voiceOn = !voiceOn;
+  config.voice = voiceOn;
+  saveConfigStorage();
+  $('voiceBtn').classList.toggle('active', voiceOn);
+  if (!voiceOn) { window.speechSynthesis.cancel(); stopMouthAnimation(); }
+  toast(voiceOn ? '🔊 语音已开启' : '🔇 语音已关闭', false);
+}
+
+/* ============================================================
+   工具
+   ============================================================ */
+function toast(msg, isError = true) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' err' : '');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+function clearChat() {
+  if (!confirm('确定清空对话记录？')) return;
+  history = []; saveHistory();
+  $('messages').innerHTML = '';
+}
+function randomDivergence() {
+  const n = (Math.random() * 0.3 + 0.9).toFixed(6);
+  $('divNum').textContent = n;
+}
+
+/* ---------- 输入框 ---------- */
+$('input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+$('input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// 预加载语音列表
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  window.speechSynthesis.getVoices();
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+initDigitalRain();
+setLoadBar(20);
+setLoadStatus('loading pixi & cubism core...');
+
+// 等待 PIXI 与 live2d 库加载
+function waitForLibs() {
+  if (window.PIXI && window.PIXI.live2d && window.Live2DCubismCore) {
+    setLoadBar(60);
+    initLive2D();
+  } else {
+    setLoadStatus('loading libraries...');
+    setTimeout(waitForLibs, 150);
+  }
+}
+waitForLibs();
+</script>
+</body>
+</html>

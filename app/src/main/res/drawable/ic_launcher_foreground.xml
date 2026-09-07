@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 原子轨道圆环 -->
+    <path
+        android:fillColor="#00e5ff"
+        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"
+        android:strokeColor="#00e5ff"
+        android:strokeWidth="0"/>
+    <path
+        android:strokeColor="#00e5ff"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M28,54a26,26 0,1 0,52 0a26,26 0,1 0,-52 0"/>
+    <!-- 斜椭圆轨道1 -->
+    <path
+        android:strokeColor="#00b8d4"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:pathData="M54,24 C78,34 78,74 54,84 C30,74 30,34 54,24 Z"
+        android:trimPathStart="0"
+        android:trimPathEnd="1"/>
+    <!-- 斜椭圆轨道2 -->
+    <path
+        android:strokeColor="#00b8d4"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:pathData="M30,42 C42,26 66,26 78,42 C66,58 42,58 30,42 Z"
+        android:trimPathStart="0"
+        android:trimPathEnd="1"/>
+    <!-- 中心原子核 -->
+    <path
+        android:fillColor="#00e5ff"
+        android:pathData="M54,54m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0"/>
+</vector>
