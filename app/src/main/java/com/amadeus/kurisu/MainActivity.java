@@ -62,13 +62,35 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 供 JavaScript 调用的原生桥。
-     * 负责向 DeepSeek（及其他 OpenAI 兼容接口）发起 HTTP 请求，
-     * 并把响应文本原样返回给 JS。
+     * 负责向 DeepSeek（及其他 OpenAI 兼容接口）发起 HTTP 请求。
+     * 因为网络请求不能阻塞 WebView 的 JS 线程（否则界面会冻结、无法交互），
+     * 这里采用异步回调：JS 传入 callbackId，原生在子线程请求完成后，
+     * 通过 evaluateJavascript 调用 window.__amadeusApiCallback 回传结果。
      */
     public class AmadeusBridge {
 
         @JavascriptInterface
-        public String callApi(String endpoint, String apiKey, String model, String payloadJson) {
+        public void callApi(final String callbackId, final String endpoint,
+                            final String apiKey, final String model,
+                            final String payloadJson) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    final String result = doRequest(endpoint, apiKey, model, payloadJson);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // result 始终是合法 JSON，直接作为字面量注入 JS 回调
+                            String js = "window.__amadeusApiCallback("
+                                    + JSONObject.quote(callbackId) + "," + result + ");";
+                            webView.evaluateJavascript(js, null);
+                        }
+                    });
+                }
+            }).start();
+        }
+
+        private String doRequest(String endpoint, String apiKey, String model, String payloadJson) {
             HttpURLConnection conn = null;
             try {
                 URL url = new URL(endpoint);
