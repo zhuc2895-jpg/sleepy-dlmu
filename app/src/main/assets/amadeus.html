@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AMADEUS System</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -38,7 +37,6 @@
     );
     pointer-events: none;
     z-index: 9999;
-    mix-blend-mode: multiply;
   }
   body::after {
     content: '';
@@ -742,6 +740,22 @@ function initDigitalRain() {
 /* ============================================================
    Live2D 加载
    ============================================================ */
+let uiShown = false;
+function showUI() {
+  if (uiShown) return;
+  uiShown = true;
+  $('loader').style.display = 'none';
+  const saved = localStorage.getItem('amadeus_user');
+  if (saved) { enterApp(saved); }
+  else { $('login').style.display = 'flex'; $('userId').focus(); }
+}
+
+function finishLoad(statusMsg) {
+  setLoadStatus(statusMsg);
+  setLoadBar(100);
+  setTimeout(showUI, 200);
+}
+
 async function initLive2D() {
   setLoadStatus('loading live2d model...');
   try {
@@ -754,7 +768,11 @@ async function initLive2D() {
       antialias: true
     });
 
-    const model = await PIXI.live2d.Live2DModel.from(KURISU_MODEL_URL);
+    // 8 秒超时，避免网络异常时一直卡在加载页导致无法交互
+    const model = await Promise.race([
+      PIXI.live2d.Live2DModel.from(KURISU_MODEL_URL),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('model load timeout')), 8000))
+    ]);
     live2dModel = model;
     live2dApp.stage.addChild(model);
 
@@ -778,25 +796,10 @@ async function initLive2D() {
 
     // 呼吸 + 眨眼 + 头部微动
     setupIdleAnimation(model);
-
-    setLoadStatus('model ready');
-    setLoadBar(100);
-    setTimeout(() => {
-      $('loader').style.display = 'none';
-      // 恢复用户名或显示登录
-      const saved = localStorage.getItem('amadeus_user');
-      if (saved) { enterApp(saved); }
-      else { $('login').style.display = 'flex'; $('userId').focus(); }
-    }, 400);
+    finishLoad('model ready');
   } catch (e) {
     console.error('Live2D load failed', e);
-    setLoadStatus('model load failed, using fallback');
-    setLoadBar(100);
-    setTimeout(() => {
-      $('loader').style.display = 'none';
-      const saved = localStorage.getItem('amadeus_user');
-      if (saved) enterApp(saved); else { $('login').style.display = 'flex'; $('userId').focus(); }
-    }, 600);
+    finishLoad('model load failed, using fallback');
   }
 }
 
@@ -1033,6 +1036,37 @@ async function sendMessage() {
   }
 }
 
+// 原生桥异步回调：native 在子线程完成请求后调用此函数
+let __apiCallId = 0;
+const __apiCallbacks = {};
+window.__amadeusApiCallback = function(id, result) {
+  const cb = __apiCallbacks[id];
+  if (!cb) return;
+  delete __apiCallbacks[id];
+  if (!result) { cb.reject(new Error('空响应')); return; }
+  if (result.error) {
+    cb.reject(new Error(`HTTP ${result.code||''} ${(result.message||'').slice(0,200)}`));
+  } else {
+    cb.resolve(result?.choices?.[0]?.message?.content || '');
+  }
+};
+
+function nativeCallApi(endpoint, key, model, payload) {
+  return new Promise((resolve, reject) => {
+    const id = 'r' + (++__apiCallId);
+    let settled = false;
+    const finish = (fn, v) => { if (!settled) { settled = true; clearTimeout(timer); fn(v); } };
+    const timer = setTimeout(() => { delete __apiCallbacks[id]; finish(reject, new Error('请求超时(120s)')); }, 125000);
+    __apiCallbacks[id] = { resolve: v => finish(resolve, v), reject: e => finish(reject, e) };
+    try {
+      window.AmadeusBridge.callApi(id, endpoint, key, model, payload);
+    } catch (e) {
+      delete __apiCallbacks[id];
+      finish(reject, e);
+    }
+  });
+}
+
 async function callAPI(messages) {
   const payload = JSON.stringify({
     model: config.model,
@@ -1042,13 +1076,9 @@ async function callAPI(messages) {
     stream: false
   });
 
-  // Android WebView 原生桥
+  // Android WebView 原生桥（异步，不阻塞界面）
   if (window.AmadeusBridge && typeof window.AmadeusBridge.callApi === 'function') {
-    const resp = window.AmadeusBridge.callApi(config.endpoint, config.key, config.model, payload);
-    let data;
-    try { data = JSON.parse(resp); } catch(e) { throw new Error('响应解析失败: ' + resp.slice(0,200)); }
-    if (data.error) throw new Error(`HTTP ${data.code} ${(data.message||'').slice(0,200)}`);
-    return data?.choices?.[0]?.message?.content || '';
+    return await nativeCallApi(config.endpoint, config.key, config.model, payload);
   }
 
   const res = await fetch(config.endpoint, {
@@ -1143,21 +1173,34 @@ if ('speechSynthesis' in window) {
 /* ============================================================
    启动
    ============================================================ */
-initDigitalRain();
-setLoadBar(20);
-setLoadStatus('loading pixi & cubism core...');
+setLoadBar(30);
+setLoadStatus('booting interface...');
 
-// 等待 PIXI 与 live2d 库加载
+// 立即显示界面，绝不让 Live2D/WebGL/网络异常阻塞交互
+// （先于任何可能抛异常的操作调度，保证交互一定可用）
+setTimeout(showUI, 250);
+
+// 数字雨绘制失败也不影响主界面交互
+try { initDigitalRain(); } catch (e) { console.error('digital rain failed', e); }
+
+// 后台异步加载 Live2D（先显示界面，再把模型挂到已可见的舞台）
+let libAttempts = 0;
 function waitForLibs() {
   if (window.PIXI && window.PIXI.live2d && window.Live2DCubismCore) {
-    setLoadBar(60);
+    setLoadBar(70);
     initLive2D();
-  } else {
-    setLoadStatus('loading libraries...');
-    setTimeout(waitForLibs, 150);
+    return;
   }
+  libAttempts++;
+  if (libAttempts > 66) {
+    console.warn('Live2D libs failed to load, entering fallback mode');
+    setLoadBar(100);
+    return;
+  }
+  setLoadStatus('loading libraries...');
+  setTimeout(waitForLibs, 150);
 }
-waitForLibs();
+setTimeout(waitForLibs, 500);
 </script>
 </body>
 </html>
